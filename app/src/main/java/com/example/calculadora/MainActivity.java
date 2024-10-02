@@ -19,7 +19,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     MaterialButton buttonC, buttonBrackOpen, buttonBrackClose;
     MaterialButton buttonDivide, buttonMultiply, buttonPlus, buttonMinus, buttonEquals;
     MaterialButton button0, button1, button2, button3, button4, button5, button6, button7, button8, button9;
-    MaterialButton buttonAC, buttonDot;
+    MaterialButton buttonAC, buttonDot, buttonsin, buttoncos, buttontan, buttonradiansdegree;
+
+    // Variable para almacenar la función trigonométrica seleccionada
+    String trigFunction = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,8 +52,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         assignId(button9, R.id.button_9);
         assignId(buttonAC, R.id.button_ac);
         assignId(buttonDot, R.id.button_decimal);
-
-
+        assignId(buttonsin, R.id.button_sin);
+        assignId(buttoncos, R.id.button_cos);
+        assignId(buttontan, R.id.button_tan);
+        assignId(buttonradiansdegree, R.id.button_radiansdegrees);
     }
 
     void assignId(MaterialButton btn, int id) {
@@ -64,40 +69,80 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         String buttonText = button.getText().toString();
         String dataToCalculate = solutionTv.getText().toString();
 
-        // Manejo del botón "AC" para limpiar las vistas
+        // Limpiar al hacer clic en "AC"
         if (buttonText.equals("ac")) {
-            solutionTv.setText("");  // Limpiar el TextView de la operación
-            resultTv.setText("");   // Restablecer el resultado a 0
-            return;  // Salir para evitar concatenar cualquier texto
+            solutionTv.setText("");
+            resultTv.setText("");
+            trigFunction = "";
+            return;
         }
 
-        // Manejo del botón "=" para calcular el resultado
+        // Evitar concatenar sobre "0" inicial
+        if (dataToCalculate.equals("0")) {
+            dataToCalculate = "";  // Reemplaza el "0" por vacío
+        }
+
+        // Lógica del botón "="
         if (buttonText.equals("=")) {
-            String finalResult = getResult(dataToCalculate);
-            if (!finalResult.equals("Err")) {
-                resultTv.setText(finalResult);
-                solutionTv.setText(finalResult);  // Mostrar el resultado en ambos TextViews
+            if (!trigFunction.isEmpty()) {
+                String result = applyTrigFunction(dataToCalculate, trigFunction);
+                resultTv.setText(result);
+                solutionTv.setText(result);
+                trigFunction = "";
+            } else {
+                String finalResult = getResult(dataToCalculate);
+                if (!finalResult.equals("Err")) {
+                    resultTv.setText(finalResult);
+                    solutionTv.setText(finalResult);
+                }
             }
             return;
         }
 
-        // Manejo del botón "C" para eliminar el último carácter
+        // Lógica del botón "C"
         if (buttonText.equals("C")) {
             if (dataToCalculate.length() > 0) {
                 dataToCalculate = dataToCalculate.substring(0, dataToCalculate.length() - 1);
             }
+        } else if (buttonText.equals("sin") || buttonText.equals("cos") || buttonText.equals("tan")) {
+            trigFunction = buttonText;
+            dataToCalculate += buttonText + "(";
         } else {
-            // Concatenar el texto del botón si no es un botón especial
-            dataToCalculate = dataToCalculate + buttonText;
+            dataToCalculate += buttonText;
         }
 
-        // Actualizar el TextView con el texto concatenado
         solutionTv.setText(dataToCalculate);
 
-        // Calcular el resultado de la expresión parcial
-        String finalResult = getResult(dataToCalculate);
-        if (!finalResult.equals("Err")) {
-            resultTv.setText(finalResult);
+        // Calcular si no hay función trigonométrica seleccionada
+        if (trigFunction.isEmpty()) {
+            String finalResult = getResult(dataToCalculate);
+            if (!finalResult.equals("Err")) {
+                resultTv.setText(finalResult);
+            }
+        }
+    }
+
+    String applyTrigFunction(String data, String trigFunction) {
+        try {
+            // Extraer el número de la expresión
+            String numberStr = data.replace(trigFunction + "(", "").replace(")", "");
+            double value = Double.parseDouble(numberStr);
+            double result = 0;
+
+            // Calcular según la función trigonométrica seleccionada
+            if (trigFunction.equals("sin")) {
+                result = Math.sin(Math.toRadians(value));
+            } else if (trigFunction.equals("cos")) {
+                result = Math.cos(Math.toRadians(value));
+            } else if (trigFunction.equals("tan")) {
+                result = Math.tan(Math.toRadians(value));
+            }
+
+            // Retornar el resultado como cadena
+            return String.valueOf(result);
+
+        } catch (NumberFormatException e) {
+            return "Err";
         }
     }
 
@@ -108,12 +153,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             Scriptable scriptable = context.initStandardObjects();
             String finalResult = context.evaluateString(scriptable, data, "Javascript", 1, null).toString();
 
-            // Verificamos si el resultado tiene decimales
             if (finalResult.contains(".")) {
-                // Convertir a número flotante y verificar si es entero
                 double result = Double.parseDouble(finalResult);
                 if (result == (int) result) {
-                    // Si es entero, convertir a entero y eliminar los decimales
                     return String.valueOf((int) result);
                 }
             }
@@ -125,5 +167,4 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             Context.exit();
         }
     }
-
 }
